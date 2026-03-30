@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1b1035">
+    
+    <meta property="og:title" content="Ajju Ball Sort Puzzle Game">
+    <meta property="og:description" content="Play the ultimate color sorting puzzle game by Ajju!">
+    <meta property="og:type" content="website">
+
+    <title>Ajju Ball Sort Puzzle Game</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --bg-start: #1b1035; 
+            --bg-end: #0f0822;
+            --text-neon: #ffffff;
+            
+            /* DYNAMIC AUTO-RESIZE VARIABLES */
+            --ball-size: clamp(20px, min(11vw, 6vh), 44px); 
+            --tube-width: calc(var(--ball-size) + 10px);
+            --tube-height: calc(var(--ball-size) * 5.2);
+            --border-width: clamp(2px, 0.5vw, 3px);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            background: radial-gradient(circle at center, var(--bg-start), var(--bg-end));
+            color: #ffffff;
+            font-family: 'Roboto', sans-serif;
+            height: 100vh; height: 100dvh; 
+            display: flex; justify-content: center; 
+            overflow: hidden; touch-action: none;
+        }
+
+        .app-container {
+            width: 100%; max-width: 600px; height: 100%;
+            display: flex; flex-direction: column; position: relative;
+            background: rgba(0, 0, 0, 0.2); box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Header */
+        header { display: flex; justify-content: space-between; align-items: center; padding: clamp(10px, 2vh, 15px) 20px; background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(10px); z-index: 10; }
+        .stat-box { display: flex; flex-direction: column; align-items: center; }
+        .stat-label { font-size: clamp(0.6rem, 1.5vh, 0.75rem); color: #aaa; text-transform: uppercase; letter-spacing: 1px; }
+        .stat-value { font-family: 'Orbitron', sans-serif; font-size: clamp(1rem, 2.5vh, 1.2rem); font-weight: 700; color: var(--text-neon); }
+
+        /* Controls */
+        .controls { display: flex; justify-content: center; gap: 15px; padding: clamp(10px, 2vh, 20px); z-index: 10; }
+        .btn { background: rgba(255, 255, 255, 0.1); border: 2px solid rgba(255, 255, 255, 0.5); border-radius: 50%; width: clamp(40px, 8vh, 50px); height: clamp(40px, 8vh, 50px); display: flex; justify-content: center; align-items: center; color: #fff; font-size: clamp(1rem, 2vh, 1.2rem); cursor: pointer; transition: all 0.2s ease; }
+        .btn:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.3); }
+        .btn.glow { box-shadow: 0 0 15px #ffeb3b; border-color: #ffeb3b; color: #ffeb3b; }
+
+        /* Game Area & Tubes */
+        .game-area { flex-grow: 1; display: flex; justify-content: center; align-content: center; align-items: center; flex-wrap: wrap; gap: clamp(15px, 2.5vh, 25px); padding: 20px 10px; width: 100%; overflow-y: auto; }
+        .tube { width: var(--tube-width); height: var(--tube-height); border: var(--border-width) solid #ffffff; border-top: none; border-radius: 0 0 calc(var(--tube-width) / 2) calc(var(--tube-width) / 2); display: flex; flex-direction: column-reverse; align-items: center; padding-bottom: clamp(2px, 0.5vh, 5px); position: relative; transition: border-color 0.3s, box-shadow 0.3s; background: rgba(255, 255, 255, 0.02); cursor: pointer; }
+        .tube::before { content: ''; position: absolute; top: calc(var(--border-width) * -1.5); left: calc(var(--border-width) * -1); right: calc(var(--border-width) * -1); height: calc(var(--tube-width) * 0.25); border: var(--border-width) solid #ffffff; border-radius: 50%; z-index: 5; }
+        .tube.highlight { border-color: #ffeb3b; box-shadow: 0 0 15px #ffeb3b; }
+        .tube.highlight::before { border-color: #ffeb3b; }
+        .tube.shake { animation: shake 0.4s ease-in-out; border-color: #ff3366; }
+        .tube.shake::before { border-color: #ff3366; }
+
+        /* Balls */
+        .ball { width: var(--ball-size); height: var(--ball-size); border-radius: 50%; margin-bottom: calc(var(--ball-size) * 0.06); position: relative; z-index: 2; transition: transform 0.2s ease; box-shadow: inset -6px -6px 12px rgba(0,0,0,0.6), 0 2px 4px rgba(0,0,0,0.5); }
+        .ball::after { content: ''; position: absolute; top: calc(var(--ball-size) * 0.15); right: calc(var(--ball-size) * 0.22); width: calc(var(--ball-size) * 0.28); height: calc(var(--ball-size) * 0.18); background: rgba(255, 255, 255, 0.8); border-radius: 50%; transform: rotate(30deg); filter: blur(1px); }
+        .ball.selected { transform: translateY(calc(var(--ball-size) * -1.2)); z-index: 10; }
+        .ball.drop-anim { animation: dropIn 0.3s ease-in; }
+
+        /* Colors */
+        .color-0 { background: #00bfff; } .color-1 { background: #ff1a1a; } .color-2 { background: #ff00ff; } .color-3 { background: #ff8c00; } .color-4 { background: #32cd32; } .color-5 { background: #ffd700; } .color-6 { background: #0000cd; } .color-7 { background: #c0c0c0; } 
+
+        /* Modals */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); display: flex; justify-content: center; align-items: center; z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+        .modal-overlay.active { opacity: 1; pointer-events: all; }
+        .modal-content { background: linear-gradient(135deg, #1e1f40, #2a2b5a); padding: 30px; border-radius: 20px; text-align: center; border: 2px solid rgba(255,255,255,0.2); box-shadow: 0 10px 30px rgba(0,0,0,0.8); transform: scale(0.8); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); display: flex; flex-direction: column; align-items: center; max-width: 90%; width: 350px; }
+        .modal-overlay.active .modal-content { transform: scale(1); }
+        .modal-title { font-family: 'Orbitron', sans-serif; font-size: 2rem; margin-bottom: 10px; color: #fff; }
+
+        /* Custom App Info */
+        .start-image { display: block; margin: 0 auto 10px auto; width: 60%; max-width: 180px; border-radius: 15px; box-shadow: 0 0 15px rgba(0, 210, 255, 0.4); border: 2px solid rgba(255, 255, 255, 0.3); }
+        .jay-bhim { font-family: 'Orbitron', sans-serif; font-size: 1.5rem; font-weight: 900; color: #fff; text-shadow: 0 0 5px #fff, 0 0 10px #00bfff, 0 0 15px #00bfff, 0 0 20px #00bfff, 0 0 30px #00bfff; margin-bottom: 15px; }
+        .stars { font-size: 2.5rem; color: #444; margin: 15px 0; }
+        .stars .fa-star.active { color: #ffd700; text-shadow: 0 0 15px #ffd700; animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        .modal-stats { margin-bottom: 20px; font-size: 1.1rem; color: #ddd; }
+        .modal-btn { background: linear-gradient(45deg, #ff00ff, #00bfff); border: none; padding: 12px 30px; border-radius: 25px; color: white; font-family: 'Orbitron', sans-serif; font-size: 1.1rem; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(255, 0, 255, 0.4); transition: transform 0.2s; }
+        .modal-btn:active { transform: scale(0.95); }
+
+        /* Animations */
+        @keyframes dropIn { 0% { transform: translateY(calc(var(--tube-height) * -1)); opacity: 0.5; } 100% { transform: translateY(0); opacity: 1; } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-5px); } 40%, 80% { transform: translateX(5px); } }
+        @keyframes popIn { 0% { transform: scale(0); } 80% { transform: scale(1.2); } 100% { transform: scale(1); } }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <header>
+        <div class="stat-box"><span class="stat-label">Level</span><span class="stat-value" id="ui-level">1</span></div>
+        <div class="stat-box"><span class="stat-label">Score</span><span class="stat-value" id="ui-score">0</span></div>
+        <div class="stat-box"><span class="stat-label">Timer</span><span class="stat-value" id="ui-timer">00:00</span></div>
+    </header>
+
+    <div class="controls">
+        <button class="btn" onclick="game.undo()" title="Undo"><i class="fas fa-undo"></i></button>
+        <button class="btn" onclick="game.restart()" title="Restart"><i class="fas fa-redo"></i></button>
+        <button class="btn" onclick="game.hint()" title="Hint" id="hint-btn"><i class="fas fa-lightbulb"></i></button>
+        <button class="btn" onclick="game.toggleSound()" title="Sound"><i class="fas fa-volume-up" id="sound-icon"></i></button>
+    </div>
+
+    <div class="game-area" id="tubes-container"></div>
+</div>
+
+<div class="modal-overlay active" id="start-overlay">
+    <div class="modal-content">
+        <h1 class="modal-title" style="font-size: 1.2rem; margin-bottom: 5px;">Ajju Ball Sort</h1>
+        <img src="AB.jpg" class="start-image" alt="Ajju Image">
+        <div class="jay-bhim">JAY BHIM</div>
+        <p style="color:#aaa; margin-bottom: 20px;">Sort colors to win!</p>
+        <button class="modal-btn" id="start-btn" onclick="game.startEngine()">PLAY NOW</button>
+    </div>
+</div>
+
+<div class="modal-overlay" id="win-overlay">
+    <div class="modal-content">
+        <h2 class="modal-title">LEVEL COMPLETE</h2>
+        <div class="stars" id="win-stars">
+            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+        </div>
+        <div class="modal-stats">
+            <p>Time: <span id="win-time" style="color:#fff; font-weight:bold;">00:00</span></p>
+            <p>Moves: <span id="win-moves" style="color:#fff; font-weight:bold;">0</span></p>
+            <p>Score: +<span id="win-score" style="color:#00ff00; font-weight:bold;">0</span></p>
+        </div>
+        <button class="modal-btn" onclick="game.nextLevel()">NEXT LEVEL <i class="fas fa-arrow-right"></i></button>
+    </div>
+</div>
+
+<script>
+    // Making game global to ensure buttons can ALWAYS find it
+    window.game = (function() {
+        let state = { level: 1, score: 0, sound: true, tubes: [], history: [], selectedTube: null, moves: 0, timerSeconds: 0, isPlaying: false };
+        let audioCtx = null; let timerInterval = null; let dropAnimTube = null;
+
+        const DOM = {
+            tubesContainer: document.getElementById('tubes-container'), uiLevel: document.getElementById('ui-level'),
+            uiScore: document.getElementById('ui-score'), uiTimer: document.getElementById('ui-timer'),
+            soundIcon: document.getElementById('sound-icon'), winOverlay: document.getElementById('win-overlay'),
+            startOverlay: document.getElementById('start-overlay'), winStars: document.getElementById('win-stars'),
+            winTime: document.getElementById('win-time'), winMoves: document.getElementById('win-moves'),
+            winScore: document.getElementById('win-score'), hintBtn: document.getElementById('hint-btn')
+        };
+
+        function init() { loadProgress(); updateUI(); }
+
+        function playTone(freq, type, duration) {
+            if (!state.sound || !audioCtx) return;
+            try {
+                const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+                osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + duration);
+            } catch(e) {}
+        }
+
+        const sounds = {
+            tap: () => playTone(500, 'sine', 0.1), move: () => playTone(800, 'sine', 0.1), error: () => playTone(150, 'sawtooth', 0.2),
+            win: () => { playTone(523.25, 'sine', 0.1); setTimeout(() => playTone(659.25, 'sine', 0.1), 100); setTimeout(() => playTone(783.99, 'sine', 0.2), 200); setTimeout(() => playTone(1046.50, 'sine', 0.4), 300); }
+        };
+
+        function triggerVibration(pattern) { try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (e) {} }
+
+        function startEngine() {
+            DOM.startOverlay.classList.remove('active');
+            // Safe Audio Initialization (Prevents crash if browser blocks it)
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext && !audioCtx) audioCtx = new AudioContext();
+                if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+            } catch (e) { console.warn("Audio Context blocked by browser"); }
+            generateLevel();
+        }
+
+        function saveProgress() {
+            try { localStorage.setItem('ajju_ball_sort_save', JSON.stringify({ level: state.level, score: state.score, sound: state.sound })); } catch(e) { console.warn("Save failed"); }
+        }
+
+        function loadProgress() {
+            try {
+                const saved = localStorage.getItem('ajju_ball_sort_save');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    state.level = parsed.level || 1; state.score = parsed.score || 0; state.sound = parsed.sound !== undefined ? parsed.sound : true;
+                    DOM.soundIcon.className = state.sound ? 'fas fa-volume-up' : 'fas fa-volume-mute';
+                }
+            } catch(e) { console.warn("Load failed"); }
+        }
+
+        function generateLevel() {
+            let numColors = Math.min(2 + Math.floor((state.level - 1) / 2), 8); 
+            let numTubes = numColors + 2; 
+            let tempTubes = [];
+            for (let i = 0; i < numColors; i++) tempTubes.push([i, i, i, i]);
+            tempTubes.push([]); tempTubes.push([]);
+
+            let shuffles = numColors * 30; 
+            for(let i = 0; i < shuffles; i++) {
+                let from = Math.floor(Math.random() * numTubes); let to = Math.floor(Math.random() * numTubes);
+                if (from !== to && tempTubes[from].length > 0 && tempTubes[to].length < 4) tempTubes[to].push(tempTubes[from].pop());
+            }
+
+            if(isGameWon(tempTubes)) return generateLevel();
+
+            state.tubes = tempTubes; state.history = []; state.selectedTube = null; state.moves = 0; state.timerSeconds = 0; state.isPlaying = true; dropAnimTube = null;
+            startTimer(); updateUI(); renderTubes();
+        }
+
+        function startTimer() { clearInterval(timerInterval); timerInterval = setInterval(() => { if (state.isPlaying) { state.timerSeconds++; DOM.uiTimer.innerText = formatTime(state.timerSeconds); } }, 1000); }
+        function formatTime(seconds) { let m = Math.floor(seconds / 60).toString().padStart(2, '0'); let s = (seconds % 60).toString().padStart(2, '0'); return `${m}:${s}`; }
+
+        function updateUI() { DOM.uiLevel.innerText = state.level; DOM.uiScore.innerText = state.score; DOM.uiTimer.innerText = formatTime(state.timerSeconds); }
+
+        function renderTubes() {
+            DOM.tubesContainer.innerHTML = '';
+            state.tubes.forEach((tube, index) => {
+                const tubeEl = document.createElement('div'); tubeEl.className = 'tube'; tubeEl.id = `tube-${index}`; tubeEl.onclick = () => handleTubeClick(index);
+                tube.forEach((colorIdx, ballIndex) => {
+                    const ball = document.createElement('div'); ball.className = `ball color-${colorIdx}`;
+                    if (state.selectedTube === index && ballIndex === tube.length - 1) ball.classList.add('selected');
+                    if (dropAnimTube === index && ballIndex === tube.length - 1) ball.classList.add('drop-anim');
+                    tubeEl.appendChild(ball);
+                });
+                DOM.tubesContainer.appendChild(tubeEl);
+            });
+            dropAnimTube = null; 
+        }
+
+        function handleTubeClick(index) {
+            if (!state.isPlaying) return;
+            if (state.selectedTube === null) {
+                if (state.tubes[index].length > 0) {
+                    let isComplete = state.tubes[index].length === 4 && state.tubes[index].every(c => c === state.tubes[index][0]);
+                    if(!isComplete) { state.selectedTube = index; sounds.tap(); triggerVibration(20); renderTubes(); }
+                }
+            } else {
+                if (state.selectedTube === index) { state.selectedTube = null; sounds.tap(); renderTubes(); } 
+                else { attemptMove(state.selectedTube, index); }
+            }
+        }
+
+        function attemptMove(fromIdx, toIdx) {
+            const sourceTube = state.tubes[fromIdx]; const destTube = state.tubes[toIdx]; const ball = sourceTube[sourceTube.length - 1];
+            if (destTube.length < 4 && (destTube.length === 0 || destTube[destTube.length - 1] === ball)) {
+                state.history.push({ from: fromIdx, to: toIdx }); destTube.push(sourceTube.pop());
+                state.moves++; state.selectedTube = null; dropAnimTube = toIdx;
+                sounds.move(); triggerVibration(30); renderTubes(); removeHighlights(); checkWin();
+            } else {
+                sounds.error(); triggerVibration([50, 50, 50]);
+                const tubeEl = document.getElementById(`tube-${toIdx}`); tubeEl.classList.add('shake');
+                setTimeout(() => tubeEl.classList.remove('shake'), 400); state.selectedTube = null; renderTubes();
+            }
+        }
+
+        function undoMove() { if (state.history.length === 0 || !state.isPlaying) return; const lastMove = state.history.pop(); const ball = state.tubes[lastMove.to].pop(); state.tubes[lastMove.from].push(ball); state.selectedTube = null; dropAnimTube = lastMove.from; sounds.move(); renderTubes(); }
+        function restartLevel() { if(!state.isPlaying) return; while (state.history.length > 0) { const m = state.history.pop(); state.tubes[m.from].push(state.tubes[m.to].pop()); } state.selectedTube = null; state.moves = 0; state.timerSeconds = 0; sounds.tap(); removeHighlights(); renderTubes(); }
+
+        function hint() {
+            if(!state.isPlaying) return; removeHighlights();
+            for (let i = 0; i < state.tubes.length; i++) {
+                if (state.tubes[i].length === 0 || (state.tubes[i].length === 4 && state.tubes[i].every(c => c === state.tubes[i][0]))) continue;
+                let topColor = state.tubes[i][state.tubes[i].length - 1];
+                for (let j = 0; j < state.tubes.length; j++) {
+                    if (i === j) continue;
+                    if (state.tubes[j].length < 4 && (state.tubes[j].length === 0 || state.tubes[j][state.tubes[j].length - 1] === topColor)) {
+                        if (state.tubes[j].length === 0 && state.tubes[i].length === 1) continue;
+                        document.getElementById(`tube-${i}`).classList.add('highlight'); document.getElementById(`tube-${j}`).classList.add('highlight');
+                        DOM.hintBtn.classList.add('glow'); setTimeout(() => DOM.hintBtn.classList.remove('glow'), 500); return;
+                    }
+                }
+            }
+        }
+
+        function removeHighlights() { document.querySelectorAll('.tube').forEach(t => t.classList.remove('highlight')); }
+        function isGameWon(tubesArray) { for (let tube of tubesArray) { if (tube.length > 0) { if (tube.length !== 4) return false; let first = tube[0]; if (!tube.every(c => c === first)) return false; } } return true; }
+
+        function checkWin() {
+            if (isGameWon(state.tubes)) {
+                state.isPlaying = false; clearInterval(timerInterval); sounds.win(); triggerVibration([100, 50, 100, 50, 200]);
+                let levelScore = Math.max(100, 1000 - (state.moves * 5) - (state.timerSeconds * 2)); state.score += levelScore;
+                let estimatedMinMoves = (state.tubes.length - 2) * 5; let stars = 1;
+                if (state.moves <= estimatedMinMoves + 5) stars = 3; else if (state.moves <= estimatedMinMoves + 15) stars = 2;
+                DOM.winTime.innerText = formatTime(state.timerSeconds); DOM.winMoves.innerText = state.moves; DOM.winScore.innerText = levelScore;
+                const starEls = DOM.winStars.querySelectorAll('.fa-star'); starEls.forEach(s => s.classList.remove('active'));
+                setTimeout(() => { for(let i=0; i<stars; i++) { setTimeout(() => starEls[i].classList.add('active'), i * 300); } }, 500);
+                setTimeout(() => DOM.winOverlay.classList.add('active'), 800);
+                state.level++; saveProgress(); updateUI();
+            }
+        }
+
+        function nextLevel() { DOM.winOverlay.classList.remove('active'); sounds.tap(); generateLevel(); }
+        function toggleSound() { state.sound = !state.sound; DOM.soundIcon.className = state.sound ? 'fas fa-volume-up' : 'fas fa-volume-mute'; saveProgress(); if(state.sound) sounds.tap(); }
+
+        return { init, startEngine, undo: undoMove, restart: restartLevel, hint, toggleSound, nextLevel };
+    })();
+
+    window.onload = window.game.init;
+</script>
+</body>
+</html>
